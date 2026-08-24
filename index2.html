@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vụ Án Căn Phòng Khóa Kín - Game Trinh Thám Logic</title>
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f111a;
+            --card-bg: #1a1d2d;
+            --accent-gold: #d4af37;
+            --accent-red: #e74c3c;
+            --accent-blue: #3498db;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border-color: #2c314d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid var(--accent-gold);
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            color: var(--accent-gold);
+            font-size: 2.2rem;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active, .tab-btn:hover {
+            background-color: var(--accent-gold);
+            color: #000;
+            border-color: var(--accent-gold);
+        }
+
+        .tab-content {
+            display: none;
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background-color: rgba(0,0,0,0.2);
+            border-left: 4px solid var(--accent-gold);
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .card h3 {
+            color: var(--accent-gold);
+            margin-bottom: 10px;
+        }
+
+        .suspect-card {
+            border-left-color: var(--accent-blue);
+        }
+
+        .clue-card {
+            border-left-color: var(--accent-red);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .clue-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 0.8rem;
+            border-radius: 3px;
+            background: #333;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .badge.red-herring {
+            background: #c0392b;
+        }
+
+        .question-box {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .question-box h4 {
+            color: var(--accent-gold);
+            margin-bottom: 10px;
+        }
+
+        label {
+            display: block;
+            margin: 8px 0;
+            cursor: pointer;
+        }
+
+        input[type="radio"], input[type="text"] {
+            margin-right: 10px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            background-color: #0f111a;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        .btn-submit {
+            background-color: var(--accent-gold);
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .btn-submit:hover {
+            background-color: #f1c40f;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: rgba(212, 175, 55, 0.1);
+            color: var(--accent-gold);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 2px solid var(--accent-gold);
+        }
+
+        .close-modal {
+            float: right;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--accent-gold);
+        }
+
+        .status-tag {
+            font-size: 0.85rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            float: right;
+        }
+        .status-online { background: #27ae60; color: white; }
+        .status-local { background: #e67e22; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🕵️ VỤ ÁN CĂN PHÒNG KHÓA KÍN</h1>
+        <p>Cấp độ: ⭐⭐⭐⭐⭐ Rất khó | Trò chơi Trinh thám Suy luận Logic</p>
+        <div style="margin-top: 10px;">
+            <span id="connection-status" class="status-tag status-local">Chế độ: Local Storage</span>
+        </div>
+    </header>
+
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('dossier')">📁 Hồ Sơ Vụ Án</button>
+        <button class="tab-btn" onclick="switchTab('suspects')">👥 Nghi Phạm</button>
+        <button class="tab-btn" onclick="switchTab('clues')">🔎 Manh Mối (10)</button>
+        <button class="tab-btn" onclick="switchTab('investigate')">🧩 Phá Án & Suy Luận</button>
+        <button class="tab-btn" onclick="switchTab('leaderboard')">🏆 Bảng Xếp Hạng</button>
+    </div>
+
+    <!-- TAB 1: HỒ SƠ -->
+    <div id="dossier" class="tab-content active">
+        <h2>Hiệp Hiện Trường Án Mạng</h2>
+        <p><b>Thời gian:</b> 22:30 tối Chủ nhật. Nạn nhân: Ông Nguyễn Văn Thành (62 tuổi).</p>
+        <p><b>Địa điểm:</b> Phòng làm việc tại biệt thự gia đình. Cửa chính khóa trong, cửa sổ khóa chốt. Không dấu hiệu cạy phá.</p>
+        <hr style="border-color: var(--border-color); margin: 15px 0;">
+        <h3>Vật chứng tại bàn làm việc:</h3>
+        <ul style="margin-left: 20px; margin-top: 10px;">
+            <li>Một ly whisky còn khoảng một nửa.</li>
+            <li>Đồng hồ bỏ túi bị vỡ, kim dừng ở <b>21:47</b>.</li>
+            <li>Giấy ghi: <i>"Tôi biết ai đã lấy tiền."</i></li>
+            <li>Điện thoại nằm úp bên <b>trái</b> nạn nhân.</li>
+            <li>Một chiếc bút máy rớt dưới sàn.</li>
+            <li>Điều hòa hoạt động ở 18°C. Khám nghiệm tử thi: Chết khoảng 21:30–22:00 do ngộ độc chất độc thần kinh.</li>
+        </ul>
+    </div>
+
+    <!-- TAB 2: NGHI PHẠM -->
+    <div id="suspects" class="tab-content">
+        <h2>Danh Sách Nghi Phạm & Lời Khai</h2>
+        <div class="grid-2" style="margin-top: 15px;">
+            <div class="card suspect-card">
+                <h3>👩 1. Bà Lan (Vợ)</h3>
+                <p><b>Lời khai:</b> Ở phòng ngủ từ 21:00 đến 22:20. Không xuống tầng dưới.</p>
+                <p><b>Ghi chú:</b> Cho biết nạn nhân gần đây hay cãi nhau với con trai.</p>
+            </div>
+            <div class="card suspect-card">
+                <h3>👨 2. Minh (Con trai trưởng)</h3>
+                <p><b>Lời khai:</b> 21:15 ra ban công gọi điện, sau đó xuống bếp lấy nước. Không vào phòng bố.</p>
+                <p><b>Ghi chú:</b> Nợ nần chồng chất. Camera thấy đi qua hành lang lúc 21:38. Quần áo: Áo sơ mi trắng.</p>
+            </div>
+            <div class="card suspect-card">
+                <h3>👩 3. Hương (Con gái)</h3>
+                <p><b>Lời khai:</b> Rời phòng bố lúc 21:20. Bố vẫn còn sống và đang uống whisky.</p>
+                <p><b>Ghi chú:</b> Người cuối cùng nói chuyện trực tiếp với nạn nhân. Quần áo: Váy xanh.</p>
+            </div>
+            <div class="card suspect-card">
+                <h3>👨 4. Quân (Em trai)</h3>
+                <p><b>Lời khai:</b> Ở phòng khách xem bóng đá từ 21:00-22:30. Sau đó đổi lời khai thành "ngủ quên" vì TV không bật.</p>
+                <p><b>Ghi chú:</b> Đang tranh chấp đất đai với nạn nhân. Quần áo: Áo len xám đậm.</p>
+            </div>
+            <div class="card suspect-card">
+                <h3>👩 5. Mai (Người giúp việc)</h3>
+                <p><b>Lời khai:</b> Ở bếp làm đồ ăn. 21:40 nghe tiếng đồng hồ kêu rất lớn trong phòng ông Thành.</p>
+                <p><b>Ghi chú:</b> Làm việc 11 năm. Quần áo: Đồng phục đen.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: MANH MỐI -->
+    <div id="clues" class="tab-content">
+        <h2>10 Manh Mối Thu Thu thập Được</h2>
+        <p style="color: var(--accent-gold); margin-bottom: 15px;">⚠️ Cảnh báo: Có ít nhất 3 manh mối được thiết kế để đánh lạc hướng!</p>
+        <div class="grid-2">
+            <div class="card clue-card" onclick="alert('Manh mối 1: Ly whisky chỉ chứa dấu vân tay ông Thành và Hương. Không có vân tay người khác.')">
+                <h3>🔎 Manh mối 1: Ly Whisky</h3>
+                <p>Dấu vân tay: Ông Thành & Hương.</p>
+            </div>
+            <div class="card clue-card" onclick="alert('Manh mối 2: Chai whisky trong bếp giống hệt nhưng KHÔNG chứa chất độc.')">
+                <h3>🔎 Manh mối 2: Chai Whisky Bếp</h3>
+                <p>Không chứa chất độc.</p>
+            </div>
+            <div class="card clue-card" onclick="alert('Manh mối 3: Cuộc gọi đến lúc 21:42 kéo dài 17 giây. Không có cuộc gọi đi sau 21:20.')">
+                <h3>🔎 Manh mối 3: Nhật Ký Điện Thoại</h3>
+                <p>Cuộc gọi đến 21:42 (17 giây).</p>
+            </div>
+            <div class="card clue-card" onclick="alert('Manh mối 4: Camera hành lang mất tín hiệu đúng 3 phút 21 giây (21:36:12 -> 21:39:33). Minh đi qua lúc này.')">
+                <h3>🔎 Manh mối 4: Camera Mất Tín Hiệu</h3>
+                <p>Gián đoạn 21:36 - 21:39.</p>
+            </div>
+            <div class="card clue-card" onclick="alert('Manh mối 5: Tay phải nạn nhân dính vết mực xanh. Bút máy dưới sàn dùng mực xanh.')">
+                <h3>🔎 Manh mối 5: Vết Mực Xanh</h3>
+                <p>Trên tay phải nạn nhân.</p>
+            </div>
+            <div class="card clue-card" onclick="alert('Manh mối 6: Sợi vải màu xám đậm dưới móng tay nạn nhân. Trùng màu áo Quân.')">
+                <h3>🔎 Manh mối 6: Sợi Vải Xám</h3>
+                <span class="badge red-herring">Cạm bẫy nghi vấn</span>
+                <p>Dưới móng tay nạn nhân.</p>
+            </div>
+            <div class="card clue-card" onclick="alert('Manh mối 7 (ĐẶC BIỆT NỔI BẬT): Chất độc KHÔNG được uống trực tiếp cùng whisky. Nó vào cơ thể SAU KHI ông đã uống whisky!')">
+                <h3>🌟 Manh Mối 7: Pháp Y Độc Chất</h3>
+                <p>Chất độc ngấm vào cơ thể SAU KHI uống whisky.</p>
+            </div>
+            <div class="card clue-card" onclick="alert('Manh mối 8: Giấy chữ Viết run/đứt nét bất thường bằng chính chiếc bút máy dưới sàn.')">
+                <h3>🔎 Manh mối 8: Tờ Giấy Nhắn</h3>
+                <p>Nét chữ run rẩy, đứt nét.</p>
+            </div>
+            <div class="card clue-card" onclick="alert('Manh mối 9: Nạn nhân thuận tay phải, nhưng điện thoại nằm bên trái.')">
+                <h3>🔎 Manh mối 9: Vị Trí Điện Thoại</h3>
+                <p>Lệch sang bên trái cơ thể.</p>
+            </div>
+            <div class="card clue-card" onclick="alert('Manh mối 10: Đồng hồ bỏ túi KHÔNG bị hỏng do rơi. Kim đã bị cố tình chỉnh về 21:47.')">
+                <h3>🔎 Manh mối 10: Chiếc Đồng Hồ</h3>
+                <p>Cố tình chỉnh kim về 21:47.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: PHÁ ÁN -->
+    <div id="investigate" class="tab-content">
+        <h2>Bàn Suy Luận & Phá Án</h2>
+        <form id="quiz-form">
+            <div class="question-box">
+                <label><b>Tên Thám Tử Của Bạn:</b></label>
+                <input type="text" id="detective-name" placeholder="Nhập tên của bạn..." required>
+            </div>
+
+            <div class="question-box">
+                <h4>❓ Câu 1: Ai là hung thủ thực sự?</h4>
+                <label><input type="radio" name="q1" value="Lan"> Bà Lan (Vợ)</label>
+                <label><input type="radio" name="q1" value="Minh"> Minh (Con trai)</label>
+                <label><input type="radio" name="q1" value="Huong"> Hương (Con gái)</label>
+                <label><input type="radio" name="q1" value="Quan"> Quân (Em trai)</label>
+                <label><input type="radio" name="q1" value="Mai"> Mai (Người giúp việc)</label>
+            </div>
+
+            <div class="question-box">
+                <h4>❓ Câu 2: Hung thủ đã đưa chất độc vào cơ thể nạn nhân bằng cách nào?</h4>
+                <label><input type="radio" name="q2" value="whisky"> Bỏ độc vào ly whisky từ trước</label>
+                <label><input type="radio" name="q2" value="pen"> Bôi chất độc thấm qua da trên thân/vỏ chiếc Bút Máy</label>
+                <label><input type="radio" name="q2" value="ice"> Cho đá có bọc chất độc tan chậm vào whisky</label>
+                <label><input type="radio" name="q2" value="phone"> Bôi chất độc lên màn hình/loa điện thoại</label>
+            </div>
+
+            <div class="question-box">
+                <h4>❓ Câu 3: Tại sao hung thủ phải cố tình chỉnh đồng hồ về 21:47?</h4>
+                <label><input type="radio" name="q3" value="alibi"> Tạo ngoại phạm giả bằng cách làm xáo trộn thời điểm tử vong</label>
+                <label><input type="radio" name="q3" value="code"> Là mật mã mở két sắt trong phòng</label>
+                <label><input type="radio" name="q3" value="accidental"> Nhằm đổ tội cho Minh (người đi ngang lúc 21:38)</label>
+            </div>
+
+            <div class="question-box">
+                <h4>❓ Câu 4: Cuộc gọi lúc 21:42 (kéo dài 17 giây) có ý nghĩa gì?</h4>
+                <label><input type="radio" name="q4" value="distract"> Hung thủ gọi để xác nhận nạn nhân đã ngấm độc/gục ngã chưa</label>
+                <label><input type="radio" name="q4" value="order"> Nạn nhân gọi đặt đồ ăn</label>
+                <label><input type="radio" name="q4" value="quarrel"> Quân gọi để đe dọa ông Thành</label>
+            </div>
+
+            <div class="question-box">
+                <h4>❓ Câu 5: Tại sao điện thoại lại nằm ở bên TRÁI nạn nhân dù ông thuận tay phải?</h4>
+                <label><input type="radio" name="q5" value="writing"> Vì tay phải ông đang cầm bút máy viết dở tờ giấy</label>
+                <label><input type="radio" name="q5" value="struggle"> Do ông bị giằng co với hung thủ rơi sang trái</label>
+                <label><input type="radio" name="q5" value="leftie"> Thực ra hung thủ đã di chuyển điện thoại</label>
+            </div>
+
+            <div class="question-box">
+                <h4>❓ Câu 6: Sợi vải màu xám dưới móng tay có vai trò gì trong vụ án?</h4>
+                <label><input type="radio" name="q6" value="true_evidence"> Bằng chứng trực tiếp buộc tội Quân</label>
+                <label><input type="radio" name="q6" value="red_herring"> Manh mối giả do tranh chấp xô xát từ trước / hung thủ gài bẫy</label>
+            </div>
+
+            <button type="button" class="btn-submit" onclick="submitDeduction()">NỘP BÀI SUY LUẬN & XEM KẾT QUẢ</button>
+        </form>
+    </div>
+
+    <!-- TAB 5: BẢNG XẾP HẠNG -->
+    <div id="leaderboard" class="tab-content">
+        <h2>🏆 Bảng Xếp Hạng Thám Tử</h2>
+        <p>Thành tích được đồng bộ real-time giữa các thiết bị thông qua Firebase Realtime Database.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Hạng</th>
+                    <th>Tên Thám Tử</th>
+                    <th>Điểm Số</th>
+                    <th>Danh Hiệu</th>
+                    <th>Thời Gian</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- RESULT MODAL -->
+<div id="result-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <h2 id="modal-score" style="color: var(--accent-gold); text-align: center;"></h2>
+        <div id="modal-body" style="margin-top: 15px;"></div>
+    </div>
+</div>
+
+<script>
+    // Config Firebase cá nhân của bạn
+    const firebaseConfig = {
+        apiKey: "AIzaSyADTQzSXKXAxo3PP9O9ePUkmgoBRuk7sOw",
+        authDomain: "detective-eaee0.firebaseapp.com",
+        databaseURL: "https://detective-eaee0-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "detective-eaee0",
+        storageBucket: "detective-eaee0.firebasestorage.app",
+        messagingSenderId: "519799651264",
+        appId: "1:519799651264:web:ae9bf995dd3499c866e625"
+    };
+
+    let useFirebase = false;
+    let db = null;
+
+    try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        useFirebase = true;
+        document.getElementById('connection-status').innerText = "Chế độ: Firebase Realtime Online";
+        document.getElementById('connection-status').className = "status-tag status-online";
+    } catch (e) {
+        console.warn("Chưa kết nối được Firebase, chuyển sang LocalStorage:", e);
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+
+        if(tabId === 'leaderboard') {
+            loadLeaderboard();
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('result-modal').style.display = 'none';
+    }
+
+    const CORRECT_ANSWERS = {
+        q1: "Huong",
+        q2: "pen",
+        q3: "alibi",
+        q4: "distract",
+        q5: "writing",
+        q6: "red_herring"
+    };
+
+    function submitDeduction() {
+        const name = document.getElementById('detective-name').value.trim();
+        if(!name) {
+            alert('Vui lòng nhập Tên Thám Tử trước khi nộp bài!');
+            return;
+        }
+
+        let score = 0;
+        
+        if(document.querySelector('input[name="q1"]:checked')?.value === CORRECT_ANSWERS.q1) score += 25;
+        if(document.querySelector('input[name="q2"]:checked')?.value === CORRECT_ANSWERS.q2) score += 20;
+        if(document.querySelector('input[name="q3"]:checked')?.value === CORRECT_ANSWERS.q3) score += 15;
+        if(document.querySelector('input[name="q4"]:checked')?.value === CORRECT_ANSWERS.q4) score += 15;
+        if(document.querySelector('input[name="q5"]:checked')?.value === CORRECT_ANSWERS.q5) score += 15;
+        if(document.querySelector('input[name="q6"]:checked')?.value === CORRECT_ANSWERS.q6) score += 10;
+
+        let rankTitle = "Tập Sự";
+        if(score >= 90) rankTitle = "Sherlock Holmes";
+        else if(score >= 70) rankTitle = "Thám Tử Lừng Danh";
+        else if(score >= 40) rankTitle = "Điều Tra Viên";
+
+        const entry = {
+            name: name,
+            score: score,
+            rank: rankTitle,
+            timestamp: new Date().toLocaleTimeString() + ' ' + new Date().toLocaleDateString()
+        };
+
+        saveScore(entry);
+
+        document.getElementById('modal-score').innerText = `ĐIỂM SỐ: ${score}/100 - Danh hiệu: ${rankTitle}`;
+        document.getElementById('modal-body').innerHTML = `
+            <h3>🔍 LỜI GIẢI CHI TIẾT TỪ ĐIỀU TRA VIÊN:</h3>
+            <p><b>1. Hung thủ: Hương (Con gái)</b></p>
+            <p><b>2. Cách gây án:</b> Hương rời phòng lúc 21:20. Cô ta đã tẩm chất độc ngấm qua da lên <i>thân chiếc bút máy</i>. Khi ông Thành dùng bút máy viết tờ giấy, độc chất bắt đầu thấm qua ngón tay ông (tạo ra hiện tượng đứt nét run rẩy và dính mực xanh).</p>
+            <p><b>3. Giải thích Điện thoại & Bút:</b> Tay phải ông Thành đang cầm bút viết, nên khi điện thoại reo lúc 21:42, ông dùng tay trái nghe (điện thoại nằm bên trái). Cuộc gọi 17 giây từ hung thủ chính là để kiểm tra xem chất độc đã phát tác khiến ông gục ngã chưa!</p>
+            <p><b>4. Cụm bẫy đánh lạc hướng:</b></p>
+            <ul>
+                <li><i>Sợi vải xám:</i> Do tranh chấp từ trước với Quân, không liên quan đến cái chết.</li>
+                <li><i>Đồng hồ 21:47:</i> Đồng hồ không vỡ do rơi mà bị chỉnh tay cố tình để tạo mốc thời gian chết giả!</li>
+            </ul>
+        `;
+        document.getElementById('result-modal').style.display = 'flex';
+    }
+
+    function saveScore(data) {
+        if (useFirebase && db) {
+            db.ref('scores').push(data);
+        } else {
+            let localScores = JSON.parse(localStorage.getItem('locked_room_scores') || '[]');
+            localScores.push(data);
+            localScores.sort((a, b) => b.score - a.score);
+            localStorage.setItem('locked_room_scores', JSON.stringify(localScores));
+        }
+    }
+
+    function loadLeaderboard() {
+        if (useFirebase && db) {
+            db.ref('scores').orderByChild('score').limitToLast(20).on('value', (snapshot) => {
+                let list = [];
+                snapshot.forEach(child => { list.push(child.val()); });
+                list.reverse();
+                renderTable(list);
+            });
+        } else {
+            let localScores = JSON.parse(localStorage.getItem('locked_room_scores') || '[]');
+            renderTable(localScores);
+        }
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('leaderboard-body');
+        tbody.innerHTML = '';
+        if(!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Chưa có dữ liệu phá án.</td></tr>`;
+            return;
+        }
+        data.forEach((row, index) => {
+            tbody.innerHTML += `
+                <tr>
+                    <td><b>#${index + 1}</b></td>
+                    <td>${escapeHtml(row.name)}</td>
+                    <td style="color:var(--accent-gold); font-weight:bold;">${row.score}</td>
+                    <td><span class="badge">${row.rank}</span></td>
+                    <td style="font-size:0.85rem; color:var(--text-muted);">${row.timestamp}</td>
+                </tr>
+            `;
+        });
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    window.onload = function() {
+        loadLeaderboard();
+    };
+</script>
+</body>
+</html>
